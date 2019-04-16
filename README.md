@@ -1,2 +1,5 @@
 # GR2-Extract
-Extracts models from GR2's .gfx files.
+Extracts models from Gravity Rush 2's .gfx files.
+
+
+For use with Noesis.
