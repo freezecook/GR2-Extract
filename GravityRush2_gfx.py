@@ -44,7 +44,7 @@ def noepyLoadModel(data, mdlList):
 	file.seek(0x14, NOESEEK_ABS)
 	file.seek(file.readUInt(), NOESEEK_ABS)
 	
-	'''
+	
 	#material code starts here
 	print("Scanning for material info from " + hex(file.tell()))
 	dataFinder = file.readUInt()
@@ -229,7 +229,9 @@ def noepyLoadModel(data, mdlList):
 			#trueMaterials[mat] = NoeMaterial("Mat"+ str(mat), "")
 		print(materials[mat])
 		file.seek(-4, NOESEEK_REL)
-	'''
+	
+	if file.tell()%16 != 0:
+		file.seek(file.tell()%16, NOESEEK_REL)
 	#beginning of mesh code
 	print("Scanning for mesh metadata from " + hex(file.tell()))
 	dataFinder = file.readUInt()
@@ -286,7 +288,7 @@ def noepyLoadModel(data, mdlList):
 			#we're gonna step back a bit for the material assignment.
 			#file.seek(-8, NOESEEK_REL) #remove if not processing materials
 		
-		'''
+		
 		#get materialID from mesh metadata. This is either 1 more or 1 less 
 		#than the materialAltID's we collected earlier.
 		thisMaterial = file.readUInt()
@@ -320,7 +322,7 @@ def noepyLoadModel(data, mdlList):
 					meshMaterials["Mesh" + str(index) + "_" + str(faceIndex)] = 0
 		print("Determined material: " + str(meshMaterials["Mesh" + str(index) + "_" + str(faceIndex)]))
 		file.seek(4, NOESEEK_REL)
-		'''
+		
 		
 		#Getting face data
 		modelDictionary["Face" + str(index) + "_" + str(faceIndex)] = file.readUShort()
@@ -361,8 +363,8 @@ def noepyLoadModel(data, mdlList):
 	print(modelVertices)
 	print("FACE BEHAVIORS")
 	print(faceBehaviors)
-	#print("MATERIALS")
-	#print(meshMaterials)
+	print("MATERIALS")
+	print(meshMaterials)
 
 	file.seek(vertStart, NOESEEK_ABS)
 	
@@ -516,7 +518,8 @@ def noepyLoadModel(data, mdlList):
 		#material.set_texture("C:\\Users\\freez\\Pictures\\GR2\\kit01_face_00.bmp", "RGB", True)
 		#end material
 		
-		msh = NoeMesh([],[], "mesh" + str(meshCounter), "mat" + str(meshCounter))
+		#msh = NoeMesh([],[], "mesh" + str(meshCounter), "mat" + str(meshCounter))
+		msh = NoeMesh([],[], "mesh" + str(meshCounter), "mat")
 		msh.setIndices(faces)
 		msh.setPositions(verts)
 		msh.setUVs(uvs)
@@ -537,9 +540,9 @@ def noepyLoadModel(data, mdlList):
 	mdl = NoeModel(meshes)
 	mdlList.append(mdl)
 	
-	'''
+	
 	#printing materials for future reference.
 	for mat in materials:
 		print(materials[mat])
-	'''
+	
 	return 1
