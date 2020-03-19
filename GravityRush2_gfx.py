@@ -42,7 +42,8 @@ def noepyLoadModel(data, mdlList):
 	print(str(vertStart))
 	
 	file.seek(0x14, NOESEEK_ABS)
-	file.seek(file.readUInt(), NOESEEK_ABS)
+	safePosition = file.readUInt()
+	file.seek(safePosition, NOESEEK_ABS)
 	
 	
 	#material code starts here
@@ -91,7 +92,7 @@ def noepyLoadModel(data, mdlList):
 	materialAltID[0] = matID
 
 	matCount = 0
-	
+	texList = []
 	#building materials
 	while finishedMaterials == False:
 		textures = {}
@@ -171,6 +172,12 @@ def noepyLoadModel(data, mdlList):
 		print(textures)
 		materials[matCount] = textures
 		
+		
+		for tex in textures:
+			#problem: how do I get CanvasWidth, CanvasHeight, etc? I gotta study the example Null left.
+			texList.append(NoeTexture(textures[tex], 512, 512, open("E:\\GR2\\" +textures[tex] + ".bmp"), noesis.NOESISTEX_RGBA32))
+		
+		
 		#check for the next magic number.
 		positionTest = file.tell() % 16
 		if positionTest != 0:
@@ -217,21 +224,24 @@ def noepyLoadModel(data, mdlList):
 		matCount = matCount + 1
 	#end of All Materials loop
 	print("PRINTING MATERIALS")
-	trueMaterials = {}
+	matList = []
 	for mat in materials:
 		#finally creating materials that Noesis can understand!
-		#if 0 in materials[mat]:
-			#trueMaterials[mat] = NoeMaterial("Mat"+ str(mat), materials[mat][0])
-			
-			#if 1 in materials[mat]:
-				#trueMaterials[mat].setNormalTexture(materials[mat][1])
-		#else:
-			#trueMaterials[mat] = NoeMaterial("Mat"+ str(mat), "")
+		#The material name is the name of the first texture.
+		if 0 in materials[mat]:
+			MaterialName = materials[mat][0]
+			material = NoeMaterial(MaterialName, "E:\\GR2\\" +MaterialName + ".bmp")
+			matList.append(material)
+		else:
+			MaterialName = "Material" + str(mat)
+			material = NoeMaterial(MaterialName, "")
+			matList.append(material)
+		#trueMaterials.append([MaterialName,])
 		print(materials[mat])
 		file.seek(-4, NOESEEK_REL)
 	
-	if file.tell()%16 != 0:
-		file.seek(file.tell()%16, NOESEEK_REL)
+	file.seek(safePosition, NOESEEK_ABS)
+	
 	#beginning of mesh code
 	print("Scanning for mesh metadata from " + hex(file.tell()))
 	dataFinder = file.readUInt()
@@ -280,13 +290,14 @@ def noepyLoadModel(data, mdlList):
 				modelVertices["Mesh" + str(index)] = 20
 			else:
 				modelVertices["Mesh" + str(index)] = 32
-			file.seek(16, NOESEEK_REL) #set to 8 if reading materials
+			#file.seek(16, NOESEEK_REL) #set to 8 if reading materials
+			file.seek(8, NOESEEK_REL)
 		else: 
 			#this is a submesh.
 			index = index - 1
 			submesh = True
 			#we're gonna step back a bit for the material assignment.
-			#file.seek(-8, NOESEEK_REL) #remove if not processing materials
+			file.seek(-8, NOESEEK_REL) #remove if not processing materials
 		
 		
 		#get materialID from mesh metadata. This is either 1 more or 1 less 
@@ -538,11 +549,12 @@ def noepyLoadModel(data, mdlList):
 	#rapi.rpgCommitTriangles(None, noesis.RPGEODATA_USHORT, modelDictionary["Vertex" + str(meshCounter)], noesis.RPGEO_POINTS, 1)
 
 	mdl = NoeModel(meshes)
+	mdl.setModelMaterials(NoeModelMaterials(texList, matList))
 	mdlList.append(mdl)
 	
 	
 	#printing materials for future reference.
-	for mat in materials:
-		print(materials[mat])
+	#for mat in materials:
+		#print(materials[mat])
 	
 	return 1
