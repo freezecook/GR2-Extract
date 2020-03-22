@@ -526,9 +526,7 @@ def noepyLoadModel(data, mdlList):
 		
 		print("Mesh" + str(meshCounter).zfill(2) + " complete")
 		meshCounter = meshCounter + 1
-		#failsafe for infinite loops
-		#print(modelDictionary.get("Vertex" + str(meshCounter)))
-		if meshCounter == 100 or modelDictionary.get("Vertex" + str(meshCounter)) == None:
+		if modelDictionary.get("Vertex" + str(meshCounter)) == None:
 			  print("File Complete at Mesh" + str(meshCounter - 1).zfill(2))
 			  fileComplete = True
 	#mrp.render("All")
