@@ -332,13 +332,22 @@ def noepyLoadModel(data, mdlList):
 		file.seek(14, NOESEEK_REL)
 		#this tells me how much face data is repeated. I can use it to 
 		#guess where the next set of useful data begins.
+		print("Reading Face Behavior of Mesh" + str(index) + "_" + str(faceIndex) + " at " + hex(file.tell()))
 		behaviorIndices = file.readUShort() 
+		if behaviorIndices == 0 and modelVertices["Mesh" + str(index)] == 32:
+			#in this rare situation, such as with g1_building_yk_pipehouse, the face indices are 0 where I'm reading them.
+			#Luckily, I can read them from a different location.
+			file.seek(-8, NOESEEK_REL)
+			print("Face indices not found, checking at " + hex(file.tell()) + " instead.")
+			behaviorIndices = file.readUShort() 
+			file.seek(6, NOESEEK_REL)
+			
 		if behaviorIndices != 3 * modelDictionary["Face" + str(index) + "_" + str(faceIndex)]:
 			faceBehaviors["Mesh" + str(index) + "_" + str(faceIndex)] = 6
 		else:
 			faceBehaviors["Mesh" + str(index) + "_" + str(faceIndex)] = 18
 		file.seek(6, NOESEEK_REL)
-		#print(hex(file.tell()))
+		print(hex(file.tell()))
 		faceIndices = file.readUInt()
 		if modelDictionary["Face" + str(index) + "_" + str(faceIndex)] * 3 != faceIndices:
 			#there is no further face data. I can stop looking for new meshes.
@@ -351,7 +360,7 @@ def noepyLoadModel(data, mdlList):
 			file.seek(12, NOESEEK_REL)
 		else:
 			file.seek(-4, NOESEEK_REL)
-		#print(hex(file.tell()))
+		print(hex(file.tell()))
 		faceIndex = faceIndex + 1
 		index = index + 1
 
@@ -452,6 +461,7 @@ def noepyLoadModel(data, mdlList):
 				faces.append(f3)
 				faceCount = i
 			#are there submeshes?
+			print(hex(file.tell()))
 			if "Face" + str(meshCounter) + "_" + str(faceIndex + 1) in modelDictionary:
 				submesh = True
 			else:
@@ -460,18 +470,30 @@ def noepyLoadModel(data, mdlList):
 			#we decide to iterate
 			if submesh == True:
 				if faceType6 == False:
-					for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
-						file.seek(6, NOESEEK_REL)
+					if vertexType == 32 or vertexType == 24:
+						print("FaceType6, vertexType32")
+					else:
+						print("where dey at doe")
+						for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
+							file.seek(6, NOESEEK_REL)
 				elif vertexType == 40:
 					if subCount40 == 0:
+						print("option1")
 						subCount40 = subCount40 + 1
 					else:
-						for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
-							file.seek(6, NOESEEK_REL)                
+						print("option2")
+						#for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
+							#file.seek(6, NOESEEK_REL)    
+				elif vertexType == 32:
+					print("dummy")
+					for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
+							file.seek(6, NOESEEK_REL)    
+				else:
+					print("Error related to faceType6")
 				padding = True
 				while padding == True:
 					checkedByte = file.readUByte()
-					if (file.tell()-1) % 32 == 0 and checkedByte == 0:
+					if (file.tell()-1) % 16 == 0 and checkedByte == 0:
 						print("BRO reading " + hex(file.tell()))
 						if file.readUByte() != 0:
 							file.seek(-2 , NOESEEK_REL)
@@ -485,8 +507,10 @@ def noepyLoadModel(data, mdlList):
 				faceIndex = faceIndex + 1
 				print(hex(file.tell()))
 			elif faceType6 == False:
-				for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
-					file.seek(6, NOESEEK_REL)
+				print("what's really good?")
+				if vertexType != 32:
+					for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
+						file.seek(6, NOESEEK_REL)
 		#end face data
 		print(hex(file.tell()) + " Count: " + str(faceCount + 1))
 
@@ -494,7 +518,7 @@ def noepyLoadModel(data, mdlList):
 		#loop to reach vertex data
 		if modelDictionary.get("Vertex" + str(meshCounter + 1)) != None:
 			while padding == True:
-				#print(hex(file.tell()))
+				print(hex(file.tell()))
 				checkedByte = file.readUByte()
 				if (file.tell()-1) % 32 == 0 and checkedByte == 0:
 					file.seek(3, NOESEEK_REL)
@@ -534,6 +558,7 @@ def noepyLoadModel(data, mdlList):
 
 	mdl = NoeModel(meshes)
 	mdlList.append(mdl)
+	
 	
 	'''
 	#printing materials for future reference.
