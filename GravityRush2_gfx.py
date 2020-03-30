@@ -41,6 +41,7 @@ def noepyLoadModel(data, mdlList):
 	
 	print(str(vertStart))
 	
+	#seek to Data Chunk
 	file.seek(0x14, NOESEEK_ABS)
 	file.seek(file.readUInt(), NOESEEK_ABS)
 	
@@ -363,10 +364,46 @@ def noepyLoadModel(data, mdlList):
 	print(faceBehaviors)
 	#print("MATERIALS")
 	#print(meshMaterials)
+	
+	#seek to mesh pointer list
+	while file.tell() % 16 != 4:
+		file.seek(1, NOESEEK_REL)
+	
+	print(hex(file.tell()))
 
+	while file.readUInt() != 16842752:
+		file.seek(12, NOESEEK_REL)
+		
+	file.seek(-4, NOESEEK_REL)
+	print(hex(file.tell()))
+	
+	#currently looking at mesh pointer list.
+	#I want to build arrays for the data types, Offsets, and byte lengths given here.
+	#This information will help me remove a lot of guesswork in the script.
+	
+	dataTypes = []
+	offsets = []
+	byteLengths = []
+	
+	dataType = file.readUInt()
+	while dataType == 16842752 or dataType == 16908288:
+		dataTypes.append(dataType)
+		offsets.append(file.readUInt())
+		byteLengths.append(file.readUInt())
+		file.seek(4, NOESEEK_REL)
+		index = index + 1
+		dataType = file.readUInt()
+		
+	#now I have the data that I'm looking for. As I build the model, I can use these arrays to ensure accuracy.
+	
+	
+	
+	#Reconstructing the model
 	file.seek(vertStart, NOESEEK_ABS)
 	
 	meshes = []
+	confirmIndex = 0
+	vertStartCurrent = vertStart
 	
 	while fileComplete == False:
 		print(" ")
@@ -411,6 +448,9 @@ def noepyLoadModel(data, mdlList):
 		
 		print(hex(file.tell()) + " Count: " + str(vertCount))
 		
+		if byteLengths[confirmIndex] + vertStartCurrent < file.tell():
+			print("WARNING: Overshoot of vertex data. Check for Vertex Errors." + hex(byteLengths[confirmIndex]))
+		
 		padding = True
 		#loop to reach face data
 		while padding == True:
@@ -422,10 +462,10 @@ def noepyLoadModel(data, mdlList):
 		#end loop
 		#now we need to confirm tht we're
 		#starting at the right place.
-		while file.tell() % 32 != 0:
-			file.seek(-1, NOESEEK_REL)
+		confirmIndex = confirmIndex + 1
 		
-		meshComplete = False
+		faceStartCurrent = offsets[confirmIndex] + vertStart
+		file.seek(faceStartCurrent, NOESEEK_ABS)
 		
 		print("Faces: " + hex(file.tell()))
 		
@@ -452,41 +492,14 @@ def noepyLoadModel(data, mdlList):
 				faces.append(f3)
 				faceCount = i
 			#are there submeshes?
-			if "Face" + str(meshCounter) + "_" + str(faceIndex + 1) in modelDictionary:
-				submesh = True
+			if confirmIndex+1 in dataTypes:
+				if dataTypes[confirmIndex + 1] == 16908288:
+					submesh = True
+				else:
+					meshComplete = True
 			else:
-				meshComplete = True
-			#moving to the next section before
-			#we decide to iterate
-			if submesh == True:
-				if faceType6 == False:
-					for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
-						file.seek(6, NOESEEK_REL)
-				elif vertexType == 40:
-					if subCount40 == 0:
-						subCount40 = subCount40 + 1
-					else:
-						for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
-							file.seek(6, NOESEEK_REL)                
-				padding = True
-				while padding == True:
-					checkedByte = file.readUByte()
-					if (file.tell()-1) % 32 == 0 and checkedByte == 0:
-						print("BRO reading " + hex(file.tell()))
-						if file.readUByte() != 0:
-							file.seek(-2 , NOESEEK_REL)
-							padding = False
-							continue
-						else:
-							file.seek(-1 , NOESEEK_REL)
-					elif checkedByte != 0:
-						file.seek(-1, NOESEEK_REL)
-						padding = False
-				faceIndex = faceIndex + 1
-				print(hex(file.tell()))
-			elif faceType6 == False:
-				for i in range(2 *(modelDictionary["Face" + str(meshCounter) + "_" + str(faceIndex)])):
-					file.seek(6, NOESEEK_REL)
+				modelComplete = True
+			#Replace Submesh logic
 		#end face data
 		print(hex(file.tell()) + " Count: " + str(faceCount + 1))
 
